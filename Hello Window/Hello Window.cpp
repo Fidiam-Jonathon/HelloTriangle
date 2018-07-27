@@ -2,7 +2,9 @@
 #include <glad\glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-
+#include <cmath>
+#include <filesystem>
+#include "Shader.h"
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void checkForShaderErrors(int success, char* logFile, unsigned int shader);
@@ -11,30 +13,6 @@ void checkForLinkErrors(int success, char* logFile, unsigned int program);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-
-// shader sources
-
-const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0f);\n"
-"}\0";
-const char *fragShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-"}\n\0";
-
-const char *fragShaderSourceYellow = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
-"}\n\0";
-
-
 
 int main()
 {
@@ -74,56 +52,15 @@ if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 /************************************
 * Shdaer init and linking
 *************************************/
-
-
-unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-unsigned int fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-unsigned int yellowShader = glCreateShader(GL_FRAGMENT_SHADER);
-glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-glCompileShader(vertexShader);
-glShaderSource(fragShader, 1, &fragShaderSource, NULL);
-glCompileShader(fragShader);
-glShaderSource(yellowShader,1,&fragShaderSourceYellow, NULL);
-glCompileShader(yellowShader);
-
-
-int success;
-char shaderLog[512];
-
-glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-checkForShaderErrors(success, shaderLog, vertexShader);
-
-glGetShaderiv(fragShader, GL_COMPILE_STATUS, &success);
-checkForShaderErrors(success, shaderLog, fragShader);
-
-glGetShaderiv(yellowShader, GL_COMPILE_STATUS, &success);
-checkForShaderErrors(success, shaderLog, yellowShader);
-
-// link shaders
-unsigned int shaderProgram = glCreateProgram();
-unsigned int shaderProgram1 = glCreateProgram();
-glAttachShader(shaderProgram, vertexShader);
-glAttachShader(shaderProgram, fragShader);
-glLinkProgram(shaderProgram);
-
-glAttachShader(shaderProgram1, vertexShader);
-glAttachShader(shaderProgram1, yellowShader);
-glLinkProgram(shaderProgram1);
-
-checkForLinkErrors(success, shaderLog, shaderProgram);
-
-glDeleteShader(vertexShader);
-glDeleteShader(fragShader);
-
+Shader shader("../Shaders/vertexShader.txt", "../shaders/fragshader.txt");
 /**********************************
 * vertices setup, VAO & VBO setup
 **********************************/
-float vert1[] =
-{
-	-0.75, 0.5f, 0.0f, // 1st tri far left
-	0.0f, -0.5f, 0.0f, // 1st tri center right
-	-0.75f, -0.5f, 0.0f, // 1st tri bottom right
-
+float vert1[] = {
+	// positions         // colors
+	0.0f, 0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+	0.5f,  -0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
 };
 
 float vert2[] = 
@@ -157,23 +94,28 @@ glBufferData(GL_ARRAY_BUFFER, sizeof(vert1), vert1, GL_STATIC_DRAW);
 
 // setup and enable vertex attribs
 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-
 glEnableVertexAttribArray(0);
+glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+glEnableVertexAttribArray(1);
 glBindBuffer(GL_ARRAY_BUFFER, 0);
 glBindVertexArray(0);
 //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 // init 2nd VBO & VAO
+/*
+
 glGenVertexArrays(1, &VAO2);
 glGenBuffers(1, &VBO2);
 glBindVertexArray(VAO2);
 
 glBindBuffer(GL_ARRAY_BUFFER, VBO2);
 glBufferData(GL_ARRAY_BUFFER, sizeof(vert2), vert2, GL_STATIC_DRAW);
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 glEnableVertexAttribArray(0);
+
 glBindBuffer(GL_ARRAY_BUFFER, 0);
 glBindVertexArray(0);
+*/
 
 // render loop
 // -----------
@@ -188,13 +130,10 @@ while (!glfwWindowShouldClose(window))
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glUseProgram(shaderProgram);
 	glBindVertexArray(VAO1);
+	shader.use();
 	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glUseProgram(shaderProgram1);
-	glBindVertexArray(VAO2);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glBindVertexArray(0);
+
 
 	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 	// -------------------------------------------------------------------------------
