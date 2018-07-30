@@ -1,14 +1,19 @@
 
+#define STB_IMAGE_IMPLEMENTATION
 #include <glad\glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cmath>
 #include <filesystem>
 #include "Shader.h"
+#include "stb_image.h"
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void checkForShaderErrors(int success, char* logFile, unsigned int shader);
 void checkForLinkErrors(int success, char* logFile, unsigned int program);
+void loadTextureData(const char* path);
+void setTexture2DAttribs();
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -25,10 +30,7 @@ glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-#ifdef __APPLE__
-glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
-#endif									 // glfw window creation
-													 // --------------------
+// glfw window creation
 GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
 if (window == NULL)
 {
@@ -57,65 +59,79 @@ Shader shader("../Shaders/vertexShader.txt", "../shaders/fragshader.txt");
 * vertices setup, VAO & VBO setup
 **********************************/
 float vert1[] = {
-	// positions         // colors
-	0.0f, 0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
-	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
-	0.5f,  -0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
-};
-
-float vert2[] = 
-{
-	-0.75f, -0.5f, 0.0f, // 2nd tri bottom left
-	0.75f, -0.5f, 0.0f,  // 2nd tri bottom right
-	0.75f, 0.5f, 0.0f    // 2nd tri right top
+	// positions         // colors		// tex coords
+	-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom left
+	0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,// bottom right
+	-0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f, 1.0f,  // top left
+	0.5f, 0.5f, 0.0f, 1.0f, 0.5f, 0.5f, 1.0f, 1.0f    // top right
 };
 
 // indices for EBO
 unsigned int indices[] = {  // note that we start from 0!
-	0, 1, 3,   // first triangle
-	2, 1, 3    // second triangle
+	0, 1, 2,   // first triangle
+	3, 2, 1    // second triangle
+};
+
+float vert2[] = 
+{
+	-0.5f, -0.5f, 0.0f, // bottom left
+	0.5f, -0.5f, 0.0f,  // bottom right
+	-0.5f, 0.5f, 0.0f    // top left
+};
+
+
+float texCoords[] =
+{
+	0.0f, 0.0f,
+	1.0f, 0.0f,
+	0.5f, 1.0f
 };
 
 // init VBO, VAO & EBO
-unsigned int VBO1, VAO1, VBO2, VAO2;
+unsigned int VBO1, VAO1, VBO2, VAO2, EBO1, TEX1, TEX2;
 glGenVertexArrays(1, &VAO1);
 glGenBuffers(1, &VBO1);
 glBindVertexArray(VAO1);
-//glGenBuffers(1, &EBO1);
+glGenBuffers(1, &EBO1);
 
 // generate and bind buffer to EBO
-//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO1);
-//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO1);
+glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 // generate and bind buffer to VBO
 glBindBuffer(GL_ARRAY_BUFFER, VBO1);
 glBufferData(GL_ARRAY_BUFFER, sizeof(vert1), vert1, GL_STATIC_DRAW);
 
-
 // setup and enable vertex attribs
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 glEnableVertexAttribArray(0);
-glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 glEnableVertexAttribArray(1);
+glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+glEnableVertexAttribArray(2);
+
+// bind and load textures
+
+glGenTextures(1, &TEX1);
+glActiveTexture(GL_TEXTURE0);
+glBindTexture(GL_TEXTURE_2D, TEX1);
+setTexture2DAttribs();
+stbi_set_flip_vertically_on_load(true);
+loadTextureData("../textures/container.jpg");
+glGenTextures(1, &TEX2);
+glActiveTexture(GL_TEXTURE1);
+glBindTexture(GL_TEXTURE_2D, TEX2);
+setTexture2DAttribs();
+loadTextureData("../textures/awesomeface.jpg");
+glBindTexture(GL_TEXTURE_2D, 0);
+
 glBindBuffer(GL_ARRAY_BUFFER, 0);
 glBindVertexArray(0);
+
+shader.use();
+shader.setInt("tex1", 0);
+shader.setInt("tex2", 1);
 //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-// init 2nd VBO & VAO
-/*
-
-glGenVertexArrays(1, &VAO2);
-glGenBuffers(1, &VBO2);
-glBindVertexArray(VAO2);
-
-glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-glBufferData(GL_ARRAY_BUFFER, sizeof(vert2), vert2, GL_STATIC_DRAW);
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-glEnableVertexAttribArray(0);
-
-glBindBuffer(GL_ARRAY_BUFFER, 0);
-glBindVertexArray(0);
-*/
 
 // render loop
 // -----------
@@ -130,9 +146,15 @@ while (!glfwWindowShouldClose(window))
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, TEX1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, TEX2);
 	glBindVertexArray(VAO1);
-	shader.use();
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 
 
 	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -183,6 +205,27 @@ void checkForLinkErrors(int success, char* logFile, unsigned int program) {
 		glGetProgramInfoLog(program, 512, NULL, logFile);
 		std::cout << "ERROR::LINK ERROR " << logFile << std::endl;
 	}
+}
+
+void loadTextureData(const char* path) {
+
+	int h, w, nrChannels;
+	unsigned char* data = stbi_load(path, &w, &h, &nrChannels, 0);
+	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		stbi_image_free(data);
+	}
+	else {
+		std::cout << "ERROR::failed to load texture" << std::endl;
+	}	
+}
+
+void setTexture2DAttribs() {
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 
