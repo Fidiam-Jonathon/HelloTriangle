@@ -1,7 +1,6 @@
-
 #define STB_IMAGE_IMPLEMENTATION
 #include <glad\glad.h>
-#include <GLFW/glfw3.h>
+#include <GLFW\glfw3.h>
 #include <iostream>
 #include <cmath>
 #include <filesystem>
@@ -9,7 +8,7 @@
 #include "stb_image.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow *window, Shader s, float* alpha);
 void checkForShaderErrors(int success, char* logFile, unsigned int shader);
 void checkForLinkErrors(int success, char* logFile, unsigned int program);
 void loadTextureData(const char* path);
@@ -131,6 +130,8 @@ glBindVertexArray(0);
 shader.use();
 shader.setInt("tex1", 0);
 shader.setInt("tex2", 1);
+shader.setFloat("alpha", 0.0);
+float alpha = 0.0;
 //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 // render loop
@@ -139,7 +140,7 @@ while (!glfwWindowShouldClose(window))
 {
 	// input
 	// -----
-	processInput(window);
+	processInput(window, shader, &alpha);
 
 	// render
 	// ------
@@ -172,10 +173,14 @@ return 0;
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow *window, Shader s, float* alpha)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		*alpha += 0.1 / 120;
+		s.setFloat("alpha", *alpha);
+	}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
