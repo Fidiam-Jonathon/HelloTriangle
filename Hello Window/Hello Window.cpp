@@ -1,6 +1,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <glad\glad.h>
 #include <GLFW\glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <cmath>
 #include <filesystem>
@@ -8,15 +11,15 @@
 #include "stb_image.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window, Shader s, float* alpha);
+void processInput(GLFWwindow *window);
 void checkForShaderErrors(int success, char* logFile, unsigned int shader);
 void checkForLinkErrors(int success, char* logFile, unsigned int program);
 void loadTextureData(const char* path);
 void setTexture2DAttribs();
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 int main()
 {
@@ -132,6 +135,9 @@ shader.setInt("tex1", 0);
 shader.setInt("tex2", 1);
 shader.setFloat("alpha", 0.0);
 float alpha = 0.0;
+
+glm::mat4 trans(1.0f);
+
 //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 // render loop
@@ -140,8 +146,21 @@ while (!glfwWindowShouldClose(window))
 {
 	// input
 	// -----
-	processInput(window, shader, &alpha);
+	processInput(window);
 
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		alpha += 0.01;
+			shader.setFloat("alpha", alpha);
+	}
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		alpha -= 0.01;
+		shader.setFloat("alpha", alpha);
+	}
+	
+	trans = glm::rotate(trans, glm::radians(0.1f), glm::vec3(0.0f, 0.0f, 1.0f));
+	trans = glm::translate(trans, glm::vec3(0.005f, -0.005f, 0.0f));
+	
+	shader.setMat4("transform", trans);
 	// render
 	// ------
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -173,14 +192,10 @@ return 0;
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, Shader s, float* alpha)
+void processInput(GLFWwindow *window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
-	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-		*alpha += 0.1 / 120;
-		s.setFloat("alpha", *alpha);
-	}
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
