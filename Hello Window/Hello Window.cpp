@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include <glad\glad.h>
-#include <GLFW\glfw3.h>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -82,7 +82,7 @@ glEnable(GL_DEPTH_TEST);
 /************************************
 * Shdaer init and linking
 *************************************/
-Shader shader("../Shaders/vertexShader.txt", "../shaders/fragshader.txt");
+Shader shader("../../Shaders/vertexShader.txt", "../../shaders/fragshader.txt");
 /**********************************
 * vertices setup, VAO & VBO setup
 **********************************/
@@ -197,12 +197,12 @@ glActiveTexture(GL_TEXTURE0);
 glBindTexture(GL_TEXTURE_2D, TEX1);
 setTexture2DAttribs();
 stbi_set_flip_vertically_on_load(true);
-loadTextureData("../textures/container.jpg");
+loadTextureData("../../textures/container.jpg");
 glGenTextures(1, &TEX2);
 glActiveTexture(GL_TEXTURE1);
 glBindTexture(GL_TEXTURE_2D, TEX2);
 setTexture2DAttribs();
-loadTextureData("../textures/awesomeface.jpg");
+loadTextureData("../../textures/awesomeface.jpg");
 glBindTexture(GL_TEXTURE_2D, 0);
 
 glBindBuffer(GL_ARRAY_BUFFER, 0);
