@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include <glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -21,10 +21,11 @@ void loadTextureData(const char* path);
 void setTexture2DAttribs();
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void setupOpenGlVersion(int majorVersion, int minorVersion, bool coreMode);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 3840;
+const unsigned int SCR_HEIGHT = 2160;
 
 // camera
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -46,14 +47,8 @@ float lastFrame = 0.0f;
 int main()
 {
 
-/*******************************
-* GLFW / GLAD init
-********************************/
 glfwInit();
-glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
+setupOpenGlVersion(4,6,true);
 // glfw window creation
 GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
 if (window == NULL)
@@ -63,7 +58,6 @@ if (window == NULL)
 	return -1;
 }
 glfwMakeContextCurrent(window);
-
 // is called when window is resized
 glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -77,26 +71,13 @@ if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	std::cout << "Failed to initialize GLAD" << std::endl;
 	return -1;
 }
+glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 glEnable(GL_DEPTH_TEST);
 
-/************************************
-* Shdaer init and linking
-*************************************/
-Shader shader("../../Shaders/vertexShader.txt", "../../shaders/fragshader.txt");
-/**********************************
-* vertices setup, VAO & VBO setup
-**********************************/
 
-/*
+Shader shader("../Shaders/vertexShader.txt", "../shaders/fragshader.txt");
 
-float vert1[] = {
-	// positions         // colors		// tex coords
-	-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom left
-	0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,// bottom right
-	-0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f, 1.0f,  // top left
-	0.5f, 0.5f, 0.0f, 1.0f, 0.5f, 0.5f, 1.0f, 1.0f    // top right
-};
-*/
+
 float vert1[] = {
 	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 	0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -160,7 +141,7 @@ unsigned int indices[] = {  // note that we start from 0!
 	3, 2, 1    // second triangle
 };
 
-float vert2[] = 
+float vert2[] =
 {
 	-0.5f, -0.5f, 0.0f, // bottom left
 	0.5f, -0.5f, 0.0f,  // bottom right
@@ -197,12 +178,12 @@ glActiveTexture(GL_TEXTURE0);
 glBindTexture(GL_TEXTURE_2D, TEX1);
 setTexture2DAttribs();
 stbi_set_flip_vertically_on_load(true);
-loadTextureData("../../textures/container.jpg");
+loadTextureData("../textures/container.jpg");
 glGenTextures(1, &TEX2);
 glActiveTexture(GL_TEXTURE1);
 glBindTexture(GL_TEXTURE_2D, TEX2);
 setTexture2DAttribs();
-loadTextureData("../../textures/awesomeface.jpg");
+loadTextureData("../textures/awesomeface.jpg");
 glBindTexture(GL_TEXTURE_2D, 0);
 
 glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -227,7 +208,7 @@ glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
 // -----------
 while (!glfwWindowShouldClose(window))
 {
-	
+
 	// input
 	// -----
 	float currentFrame = glfwGetTime();
@@ -237,12 +218,12 @@ while (!glfwWindowShouldClose(window))
 	processInput(window, &cameraPos, &cameraFront, &cameraUp, deltaTime);
 	shader.use();
 
-	
+
 	view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 	projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.00f);
 	shader.setMat4("view", view);
 	shader.setMat4("projection", projection);
-		
+
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -252,7 +233,7 @@ while (!glfwWindowShouldClose(window))
 	glBindTexture(GL_TEXTURE_2D, TEX2);
 	glBindVertexArray(VAO1);
 
-	for (unsigned int i= 0; i < 10; i++) {
+	for (unsigned int i = 0; i < 10; i++) {
 
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 model(1);
@@ -265,10 +246,10 @@ while (!glfwWindowShouldClose(window))
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 	}
 
-	
+
 	//trans = glm::rotate(trans, glm::radians(0.1f), glm::vec3(0.0f, 0.0f, 1.0f));
 	//trans = glm::translate(trans, glm::vec3(0.005f, -0.005f, 0.0f));
-	
+
 	//shader.setMat4("transform", trans);
 	// render
 	// ------
@@ -302,22 +283,22 @@ void processInput(GLFWwindow* window, glm::vec3 *pos, glm::vec3 *front, glm::vec
 		*pos += cameraSpeed * (*front);
 		std::cout << pos->x << " " << pos->y << " " << pos->z << std::endl;
 	}
-		
+
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
 		*pos -= cameraSpeed * (*front);
 		std::cout << pos->x << " " << pos->y << " " << pos->z << std::endl;
 	}
-		
+
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
 		*pos -= glm::normalize(glm::cross((*front), (*up))) * cameraSpeed;
 		std::cout << pos->x << " " << pos->y << " " << pos->z << std::endl;
 	}
-		
+
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 		*pos += glm::normalize(glm::cross((*front), (*up))) * cameraSpeed;
 		std::cout << pos->x << " " << pos->y << " " << pos->z << std::endl;
 	}
-		
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -360,7 +341,7 @@ void loadTextureData(const char* path) {
 	}
 	else {
 		std::cout << "ERROR::failed to load texture" << std::endl;
-	}	
+	}
 }
 
 void setTexture2DAttribs() {
@@ -413,6 +394,18 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 		fov = 1.0f;
 	if (fov >= 45.0f)
 		fov = 45.0f;
+}
+
+void setupOpenGlVersion(int majorVersion, int minorVersion, bool coreMode) {
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, majorVersion);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minorVersion);
+	if (coreMode) {
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	}
+	else {
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+	}
+	
 }
 
 
